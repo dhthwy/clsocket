@@ -87,8 +87,11 @@
 //-----------------------------------------------------------------------------
 // General class macro definitions and typedefs
 //-----------------------------------------------------------------------------
-#ifndef INVALID_SOCKET
-#define INVALID_SOCKET    ~(0)
+
+// Windows socket headers define INVALID_SOCKET
+// For POSIX, it's -1.
+#ifndef _WIN32
+    #define INVALID_SOCKET -1
 #endif
 
 #define SOCKET_SENDFILE_BLOCKSIZE 8192
@@ -141,6 +144,13 @@ public:
         SocketConnectionReset,     ///< Connection was forcibly closed by the remote host.
         SocketAddressInUse,        ///< Address already in use.
         SocketInvalidPointer,      ///< Pointer type supplied as argument is invalid.
+#if _WIN32
+        SocketWSASYSNOTREADY,
+        SocketWSAVERNOTSUPPORTED,
+        SocketWSAEINPROGRESS,
+        SocketWSAEPROCLIM,
+        SocketWSAEFAULT,
+#endif
         SocketEunknown             ///< Unknown error please report to mark@carrierlabs.com
     } CSocketError;
 
@@ -549,6 +559,8 @@ private:
     /// Flush the socket descriptor owned by the object.
     /// @return true data was successfully sent, else return false;
     bool Flush();
+
+    bool SetTcpNoDelay(bool enable);
 
     CSimpleSocket *operator=(CSimpleSocket &socket);
 
