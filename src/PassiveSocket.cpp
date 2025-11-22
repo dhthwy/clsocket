@@ -186,34 +186,28 @@ bool CPassiveSocket::Listen(const char *pAddr, uint16 nPort, int32 nConnectionBa
 //------------------------------------------------------------------------------
 CActiveSocket *CPassiveSocket::Accept()
 {
-    uint32         nSockLen;
-    CActiveSocket *pClientSocket = NULL;
-    SOCKET         socket = CSimpleSocket::SocketError;
-
     if (m_nSocketType != CSimpleSocket::SocketTypeTcp)
     {
         SetSocketError(CSimpleSocket::SocketProtocolError);
-        return pClientSocket;
+        return nullptr;
     }
 
-    pClientSocket = new CActiveSocket();
+    auto pClientSocket = new CActiveSocket();
 
     //--------------------------------------------------------------------------
     // Wait for incoming connection.
     //--------------------------------------------------------------------------
-    if (pClientSocket != NULL)
-    {
-        CSocketError socketErrno = CSimpleSocket::SocketSuccess;
-
+    if (pClientSocket != nullptr) {
+        CSocketError socketErrno = CSimpleSocket::SocketError;
         m_timer.Initialize();
         m_timer.SetStartTime();
 
-        nSockLen = sizeof(m_stClientSockaddr);
-
-        do
-        {
+        do {
             socketErrno = CSimpleSocket::SocketSuccess;
-            socket = accept(m_socket, (struct sockaddr *)&m_stClientSockaddr, (socklen_t *)&nSockLen);
+            uint32 nSockLen = sizeof(m_stClientSockaddr);
+
+            SOCKET socket = accept(m_socket, (struct sockaddr *)&m_stClientSockaddr, (socklen_t *)&nSockLen);
+
             if (socket == INVALID_SOCKET) {
                 TranslateSocketError();
                 socketErrno = GetSocketError();
@@ -221,26 +215,21 @@ CActiveSocket *CPassiveSocket::Accept()
             }
 
             pClientSocket->SetSocketHandle(socket);
-            pClientSocket->TranslateSocketError();
-            socketErrno = pClientSocket->GetSocketError();
-            socklen_t nSockLen = sizeof(struct sockaddr);
+            pClientSocket->m_stClientSockaddr = m_stClientSockaddr;
+            socklen_t sslen = sizeof(pClientSocket->m_stServerSockaddr);
+            if (getsockname(socket, (struct sockaddr *)&pClientSocket->m_stServerSockaddr, &sslen) == -1) {
+                TranslateSocketError();
+                socketErrno = GetSocketError();
+                break;
 
-            // Store client and server IP and port information for this
-            // connection.
-            getpeername(m_socket, (struct sockaddr *)&pClientSocket->m_stClientSockaddr, &nSockLen);
-            memcpy((void *)&pClientSocket->m_stClientSockaddr, (void *)&m_stClientSockaddr, nSockLen);
-
-            memset(&pClientSocket->m_stServerSockaddr, 0, nSockLen);
-            getsockname(m_socket, (struct sockaddr *)&pClientSocket->m_stServerSockaddr, &nSockLen);
-
+            }
         } while (socketErrno == CSimpleSocket::SocketInterrupted);
 
         m_timer.SetEndTime();
 
-        if (socketErrno != CSimpleSocket::SocketSuccess)
-        {
+        if (socketErrno != CSimpleSocket::SocketSuccess) {
             delete pClientSocket;
-            pClientSocket = NULL;
+            pClientSocket = nullptr;
         }
     }
 
