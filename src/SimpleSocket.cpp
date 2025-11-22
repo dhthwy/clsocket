@@ -145,7 +145,7 @@ bool CSimpleSocket::Initialize()
     memset(&m_hWSAData, 0, sizeof(m_hWSAData));
     auto starterr = WSAStartup(MAKEWORD(2, 0), &m_hWSAData);
     if (starterr != 0) {
-        SetSocketError(starterr);
+        SetSocketError(CSimpleSocket::SocketInvalidSocket);
         return false;
     }
 #endif
@@ -311,7 +311,7 @@ bool CSimpleSocket::SetTcpNoDelay(bool enable)
 
     if (SETSOCKOPT(m_socket, IPPROTO_TCP, TCP_NODELAY, &v, sizeof(int32_t)) == CSimpleSocket::SocketError)
     {
-        CSimpleSocket::TranslateSocketError();
+        TranslateSocketError();
         return false;
     }
     return true;
@@ -357,7 +357,7 @@ int32 CSimpleSocket::Send(const uint8 *pBuf, size_t bytesToSend)
             do
             {
                 m_nBytesSent = SEND(m_socket, pBuf, bytesToSend, 0);
-                if (m_nBytesSent != CSimpleSocket::SocketError)
+                if (m_nBytesSent >= 0)
                     break;
                 TranslateSocketError();
             } while (GetSocketError() == CSimpleSocket::SocketInterrupted);
@@ -391,8 +391,9 @@ int32 CSimpleSocket::Send(const uint8 *pBuf, size_t bytesToSend)
                 do
                 {
                     m_nBytesSent = SENDTO(m_socket, pBuf, bytesToSend, 0, (const sockaddr *)&m_stServerSockaddr, sizeof(m_stServerSockaddr));
-                    if (m_nBytesSent != CSimpleSocket::SocketError)
+                    if (m_nBytesSent >= 0)
                         break;
+
                     TranslateSocketError();
                 } while (GetSocketError() == CSimpleSocket::SocketInterrupted);
             }
@@ -756,6 +757,10 @@ int32 CSimpleSocket::Receive(int32 nMaxBytes, uint8 * pBuffer )
             m_pBuffer = NULL;
         }
     }
+
+    // Peer closed the connection
+    if (m_nBytesReceived == 0)
+        Close();
 
     return m_nBytesReceived;
 }

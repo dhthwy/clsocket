@@ -144,13 +144,6 @@ public:
         SocketConnectionReset,     ///< Connection was forcibly closed by the remote host.
         SocketAddressInUse,        ///< Address already in use.
         SocketInvalidPointer,      ///< Pointer type supplied as argument is invalid.
-#if _WIN32
-        SocketWSASYSNOTREADY,
-        SocketWSAVERNOTSUPPORTED,
-        SocketWSAEINPROGRESS,
-        SocketWSAEPROCLIM,
-        SocketWSAEFAULT,
-#endif
         SocketEunknown             ///< Unknown error please report to mark@carrierlabs.com
     } CSocketError;
 
@@ -208,7 +201,7 @@ public:
     /// descriptor.
     ///  @return true if the socket object contains a valid socket descriptor.
     virtual bool IsSocketValid(void) {
-        return (m_socket != SocketError);
+        return (m_socket != INVALID_SOCKET);
     };
 
     /// Provides a standard error code for cross platform development by
