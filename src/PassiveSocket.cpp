@@ -267,6 +267,7 @@ int32 CPassiveSocket::Send(const uint8 *pBuf, size_t bytesToSend)
         break;
     }
     case CSimpleSocket::SocketTypeTcp:
+            // This function is for UDP. Shouldn't even get here.
         m_nBytesSent = CSimpleSocket::Send(pBuf, bytesToSend);
         break;
     default:

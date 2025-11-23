@@ -41,7 +41,6 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
 #include "SimpleSocket.h"
-#include <stdexcept>
 
 CSimpleSocket::CSimpleSocket(CSocketType nType) :
     m_socket(INVALID_SOCKET),
@@ -176,7 +175,7 @@ bool CSimpleSocket::BindInterface(const char *pInterface)
 {
     struct in_addr stInterfaceAddr;
 
-    if (GetMulticast() == true && pInterface)
+    if (GetMulticast() && pInterface)
     {
         stInterfaceAddr.s_addr= inet_addr(pInterface);
         if (SETSOCKOPT(m_socket, IPPROTO_IP, IP_MULTICAST_IF, &stInterfaceAddr, sizeof(stInterfaceAddr)) == CSimpleSocket::SocketError)
@@ -278,7 +277,8 @@ uint32 CSimpleSocket::GetWindowSize(uint32 nOptionName)
     // query for buffer size
     uint32 nTcpWinSize = 0;
     socklen_t nLen = sizeof(nTcpWinSize);
-    if (GETSOCKOPT(m_socket, SOL_SOCKET, nOptionName, &nTcpWinSize, &nLen) == CSimpleSocket::SocketError) {
+    if (GETSOCKOPT(m_socket, SOL_SOCKET, nOptionName, &nTcpWinSize, &nLen) == CSimpleSocket::SocketError)
+    {
         TranslateSocketError();
         return 0;
     }
@@ -297,7 +297,8 @@ uint32 CSimpleSocket::SetWindowSize(uint32 nOptionName, uint32 nWindowSize)
     if (!IsSocketValid())
         return 0;
 
-    if (SETSOCKOPT(m_socket, SOL_SOCKET, nOptionName, &nWindowSize, sizeof(nWindowSize)) == CSimpleSocket::SocketError) {
+    if (SETSOCKOPT(m_socket, SOL_SOCKET, nOptionName, &nWindowSize, sizeof(nWindowSize)) == CSimpleSocket::SocketError)
+    {
         TranslateSocketError();
         return 0;
     }
@@ -336,7 +337,7 @@ bool CSimpleSocket::EnableNagleAlgoritm()
 int32 CSimpleSocket::Send(const uint8 *pBuf, size_t bytesToSend)
 {
     if (!IsSocketValid())
-        return 0;
+        return CSimpleSocket::SocketError;
 
     SetSocketError(CSimpleSocket::SocketSuccess);
     m_nBytesSent = 0;
@@ -431,13 +432,14 @@ bool CSimpleSocket::Close()
         return false;
     }
 
+    m_socket = INVALID_SOCKET;
+
     if (CLOSE(m_socket) == CSimpleSocket::SocketError)
     {
         TranslateSocketError();
         return false;
     }
-        // XXX: FIXME: always mark invalid socket? the buffer was deleted.
-    m_socket = INVALID_SOCKET;
+
     return true;
 }
 
@@ -465,32 +467,8 @@ bool CSimpleSocket::Shutdown(CShutdownMode nShutdown)
 //------------------------------------------------------------------------------
 bool CSimpleSocket::Flush()
 {
-    int32 nTcpNoDelay = 1;
-    int32 nCurFlags = 0;
-    bool ret = true;
-
-    try {
-        if (GETSOCKOPT(m_socket, IPPROTO_TCP, TCP_NODELAY, &nCurFlags, sizeof(int32)) == CSocketError::SocketError)
-            throw(std::runtime_error("Failed to retrieve TCP_NODELAY setting"));
-
-        if (SETSOCKOPT(m_socket, IPPROTO_TCP, TCP_NODELAY, &nTcpNoDelay, sizeof(int32)) == CSocketError::SocketError)
-            throw(std::runtime_error("Failed to set TCP_NODELAY option"));
-
-        // Send empty byte stream to flush the TCP send buffer
-        uint8 tmpbuf = 0;
-        if (Send(&tmpbuf, 0) == CSocketError::SocketError)
-            throw(std::runtime_error("Failed to send"));
-
-    } catch (std::runtime_error& e) {
-        TranslateSocketError();
-        ret = false;
-
-        if (nCurFlags != nTcpNoDelay) {
-            SETSOCKOPT(m_socket, IPPROTO_TCP, TCP_NODELAY, &nCurFlags, sizeof(int32));
-        }
-    }
-
-    return ret;
+    // Can't flush a TCP socket.
+    return true;
 }
 
 
@@ -517,11 +495,6 @@ int32 CSimpleSocket::Writev(const struct iovec *pVector, size_t nCount)
         }
 
         nBytesSent += nBytes;
-    }
-
-    if (i > 0)
-    {
-        Flush();
     }
 
     return nBytesSent;
@@ -1093,6 +1066,7 @@ bool CSimpleSocket::Select(int32 nTimeoutSec, int32 nTimeoutUSec)
         pTimeout = &timeout;
     }
 
+    // On Windows the first argument is ignored.
     nNumDescriptors = SELECT(m_socket+1, &m_readFds, &m_writeFds, &m_errorFds, pTimeout);
 //    nNumDescriptors = SELECT(m_socket+1, &m_readFds, NULL, NULL, pTimeout);
 
@@ -1132,4 +1106,3 @@ bool CSimpleSocket::Select(int32 nTimeoutSec, int32 nTimeoutUSec)
 
     return true;
 }
-

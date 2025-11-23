@@ -166,8 +166,10 @@ public:
     /// @return true if properly initialized.
     virtual bool Initialize(void);
 
-    /// Close socket
-    /// @return true if successfully closed otherwise returns false.
+    /// Close socket.
+    /// The socket is marked unusable immediately regardless of return value,
+    /// @return true if the OS successfully closed
+    /// otherwise returns false if the OS encountered an error during cleanup.
     virtual bool Close(void);
 
     /// Shutdown shut down socket send and receive operations
@@ -551,7 +553,7 @@ private:
 
     /// Flush the socket descriptor owned by the object.
     /// @return true data was successfully sent, else return false;
-    bool Flush();
+    static bool Flush();
 
     bool SetTcpNoDelay(bool enable);
 
