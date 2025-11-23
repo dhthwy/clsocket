@@ -691,7 +691,7 @@ int32 CSimpleSocket::Receive(int32 nMaxBytes, uint8 * pBuffer )
             {
                 m_nBytesReceived = RECVFROM(m_socket, pWorkBuffer, nMaxBytes, 0,
                                             &m_stMulticastGroup, &srcSize);
-                if (m_nBytesReceived != CSocketError::SocketError)
+                if (m_nBytesReceived != CSimpleSocket::SocketError)
                     break;
                 TranslateSocketError();
             } while (GetSocketError() == CSimpleSocket::SocketInterrupted);

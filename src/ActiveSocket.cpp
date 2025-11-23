@@ -288,16 +288,28 @@ bool CActiveSocket::Open(const char *pAddr, uint16 nPort)
     //--------------------------------------------------------------------------
     if (bRetVal)
     {
-        socklen_t nSockLen = sizeof(struct sockaddr);
+        socklen_t nSockLen = sizeof(m_stServerSockaddr);
 
         memset(&m_stServerSockaddr, 0, nSockLen);
-        getpeername(m_socket, (struct sockaddr *)&m_stServerSockaddr, &nSockLen);
+        if (getpeername(m_socket,
+                        (struct sockaddr *)&m_stServerSockaddr,
+                        &nSockLen) == CSimpleSocket::SocketError)
+        {
+            TranslateSocketError();
+            return false;
+        }
 
-        nSockLen = sizeof(struct sockaddr);
+        nSockLen = sizeof(m_stClientSockaddr);
         memset(&m_stClientSockaddr, 0, nSockLen);
-        getsockname(m_socket, (struct sockaddr *)&m_stClientSockaddr, &nSockLen);
+        if (getsockname(m_socket,
+                        (struct sockaddr *)&m_stClientSockaddr,
+                        &nSockLen) == CSimpleSocket::SocketError)
+        {
+            TranslateSocketError();
+            return false;
+        }
 
-        SetSocketError(SocketSuccess);
+        SetSocketError(CSimpleSocket::SocketSuccess);
     }
 
     return bRetVal;
