@@ -308,9 +308,9 @@ uint32 CSimpleSocket::SetWindowSize(uint32 nOptionName, uint32 nWindowSize)
 
 bool CSimpleSocket::SetTcpNoDelay(bool enable)
 {
-    int32_t v = enable ? 1 : 0;
+    int32 v = enable ? 1 : 0;
 
-    if (SETSOCKOPT(m_socket, IPPROTO_TCP, TCP_NODELAY, &v, sizeof(int32_t)) == CSimpleSocket::SocketError)
+    if (SETSOCKOPT(m_socket, IPPROTO_TCP, TCP_NODELAY, &v, sizeof(int32)) == CSimpleSocket::SocketError)
     {
         TranslateSocketError();
         return false;
